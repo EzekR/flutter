@@ -1,4 +1,4 @@
-// Copyright 2014 The Flutter Authors. All rights reserved.
+// Copyright 2018 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -52,11 +52,13 @@ Future<T> showSearch<T>({
   @required BuildContext context,
   @required SearchDelegate<T> delegate,
   String query = '',
+  String hintText= '请输入设备名称/型号/序列号'
 }) {
   assert(delegate != null);
   assert(context != null);
   delegate.query = query ?? delegate.query;
   delegate._currentBody = _SearchBody.suggestions;
+  delegate.hintText = hintText;
   return Navigator.of(context).push(_SearchPageRoute<T>(
     delegate: delegate,
   ));
@@ -88,40 +90,6 @@ Future<T> showSearch<T>({
 /// call. Call [SearchDelegate.close] before re-using the same delegate instance
 /// for another [showSearch] call.
 abstract class SearchDelegate<T> {
-
-  /// Constructor to be called by subclasses which may specify [searchFieldLabel], [keyboardType] and/or
-  /// [textInputAction].
-  ///
-  /// {@tool sample}
-  /// ```dart
-  /// class CustomSearchHintDelegate extends SearchDelegate {
-  ///   CustomSearchHintDelegate({
-  ///     String hintText,
-  ///   }) : super(
-  ///     searchFieldLabel: hintText,
-  ///     keyboardType: TextInputType.text,
-  ///     textInputAction: TextInputAction.search,
-  ///   );
-  ///
-  ///   @override
-  ///   Widget buildLeading(BuildContext context) => Text("leading");
-  ///
-  ///   @override
-  ///   Widget buildSuggestions(BuildContext context) => Text("suggestions");
-  ///
-  ///   @override
-  ///   Widget buildResults(BuildContext context) => Text('results');
-  ///
-  ///   @override
-  ///   List<Widget> buildActions(BuildContext context) => [];
-  /// }
-  /// ```
-  /// {@end-tool}
-  SearchDelegate({
-    this.searchFieldLabel,
-    this.keyboardType,
-    this.textInputAction = TextInputAction.search,
-  });
 
   /// Suggestions shown in the body of the search page while the user types a
   /// query into the search field.
@@ -259,22 +227,6 @@ abstract class SearchDelegate<T> {
       ..pop(result);
   }
 
-  /// The hint text that is shown in the search field when it is empty.
-  ///
-  /// If this value is set to null, the value of MaterialLocalizations.of(context).searchFieldLabel will be used instead.
-  final String searchFieldLabel;
-
-  /// The type of action button to use for the keyboard.
-  ///
-  /// Defaults to the default value specified in [TextField].
-  final TextInputType keyboardType;
-
-  /// The text input action configuring the soft keyboard to a particular action
-  /// button.
-  ///
-  /// Defaults to [TextInputAction.search].
-  final TextInputAction textInputAction;
-
   /// [Animation] triggered when the search pages fades in or out.
   ///
   /// This animation is commonly used to animate [AnimatedIcon]s of
@@ -299,6 +251,7 @@ abstract class SearchDelegate<T> {
   }
 
   _SearchPageRoute<T> _route;
+  String hintText;
 }
 
 /// Describes the body that is currently shown under the [AppBar] in the
@@ -467,8 +420,8 @@ class _SearchPageState<T> extends State<_SearchPage<T>> {
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterialLocalizations(context));
     final ThemeData theme = widget.delegate.appBarTheme(context);
-    final String searchFieldLabel = widget.delegate.searchFieldLabel
-      ?? MaterialLocalizations.of(context).searchFieldLabel;
+    //final String searchFieldLabel = MaterialLocalizations.of(context).searchFieldLabel;
+    final String searchFieldLabel = widget.delegate.hintText;
     Widget body;
     switch(widget.delegate._currentBody) {
       case _SearchBody.suggestions:
@@ -485,9 +438,8 @@ class _SearchPageState<T> extends State<_SearchPage<T>> {
         break;
     }
     String routeName;
-    switch (theme.platform) {
+    switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
         routeName = '';
         break;
       case TargetPlatform.android:
@@ -511,15 +463,17 @@ class _SearchPageState<T> extends State<_SearchPage<T>> {
             controller: widget.delegate._queryTextController,
             focusNode: focusNode,
             style: theme.textTheme.title,
-            textInputAction: widget.delegate.textInputAction,
-            keyboardType: widget.delegate.keyboardType,
+            textInputAction: TextInputAction.search,
             onSubmitted: (String _) {
               widget.delegate.showResults(context);
             },
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: searchFieldLabel,
-              hintStyle: theme.inputDecorationTheme.hintStyle,
+              hintStyle: TextStyle(
+                fontSize: 16.0,
+                color: Colors.grey
+              )//theme.inputDecorationTheme.hintStyle,
             ),
           ),
           actions: widget.delegate.buildActions(context),
